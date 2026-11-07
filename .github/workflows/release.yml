@@ -43,7 +43,7 @@ jobs:
         run: |
           Copy-Item README.md publish/README.md
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item 'publish/N64 Remapper Studio.exe' 'dist/N64 Remapper Studio.exe'
+          Copy-Item 'publish/N64 Remapper Studio.exe' 'dist/N64.Remapper.Studio.exe'
           Compress-Archive -Path publish/* -DestinationPath dist/N64-Remapper-Studio-Windows-x64.zip -CompressionLevel Optimal
           $sums = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
             $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -62,5 +62,5 @@ jobs:
             Write-Host "Release $tag already exists. Existing release assets are preserved."
             exit 0
           }
-          gh release create $tag 'dist/N64 Remapper Studio.exe' 'dist/N64-Remapper-Studio-Windows-x64.zip' 'dist/SHA256SUMS.txt' --target $env:COMMIT --title "N64 Remapper Studio $tag preview" --notes-file RELEASE_NOTES.md --prerelease
+          gh release create $tag 'dist/N64.Remapper.Studio.exe' 'dist/N64-Remapper-Studio-Windows-x64.zip' 'dist/SHA256SUMS.txt' --target $env:COMMIT --title "N64 Remapper Studio $tag preview" --notes-file RELEASE_NOTES.md --prerelease
           if ($LASTEXITCODE -ne 0) { throw 'Release publishing failed.' }
