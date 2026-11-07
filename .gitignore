@@ -1,0 +1,9 @@
+bin/
+obj/
+publish/
+dist/
+.vs/
+*.user
+*.suo
+*-test.txt
+probe.txt
