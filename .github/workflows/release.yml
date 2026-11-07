@@ -1,0 +1,66 @@
+name: Build, verify and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Publish portable Windows x64 app
+        run: |
+          dotnet publish ./N64Studio.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o ./publish
+          if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
+      - name: Run simulator checks
+        run: |
+          $app = Join-Path $PWD 'publish/N64 Remapper Studio.exe'
+          $log = Join-Path $env:RUNNER_TEMP 'self-test.txt'
+          $test = Start-Process $app -ArgumentList "--self-test `"$log`"" -Wait -PassThru -WindowStyle Hidden
+          if (Test-Path $log) { Get-Content $log }
+          if ($test.ExitCode -ne 0) { throw 'Simulator checks failed.' }
+          if (!(Test-Path $log) -or !(Select-String -Path $log -Pattern '^PASS:' -Quiet)) { throw 'Self-test result is missing.' }
+      - name: Package release assets
+        run: |
+          Copy-Item README.md publish/README.md
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item 'publish/N64 Remapper Studio.exe' 'dist/N64 Remapper Studio.exe'
+          Compress-Archive -Path publish/* -DestinationPath dist/N64-Remapper-Studio-Windows-x64.zip -CompressionLevel Optimal
+          $sums = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          $sums | Set-Content -Encoding utf8 dist/SHA256SUMS.txt
+      - name: Publish preview release
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          $tag = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { 'v0.1.0' }
+          gh release view $tag --json tagName *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists. Existing release assets are preserved."
+            exit 0
+          }
+          gh release create $tag 'dist/N64 Remapper Studio.exe' 'dist/N64-Remapper-Studio-Windows-x64.zip' 'dist/SHA256SUMS.txt' --target $env:COMMIT --title "N64 Remapper Studio $tag preview" --notes-file RELEASE_NOTES.md --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Release publishing failed.' }

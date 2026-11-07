@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <AssemblyName>N64 Remapper Studio</AssemblyName>
+    <Version>0.1.0</Version>
+    <Description>Native Windows configuration for the Zenith Control Labs N64 Remapper, with live input, calibration, N64 mappings, profiles and verified apply.</Description>
+    <RepositoryUrl>https://github.com/superweegeex-ship-it/AI-N64-Remapper-Studio</RepositoryUrl>
+  </PropertyGroup>
+</Project>
